@@ -7,9 +7,9 @@
 
 #define C 16
 #define R 16
-#define EASY 20
-#define MEDIUM 30
-#define HARD 40
+#define EASY 15
+#define MEDIUM 20
+#define HARD 25
 
 typedef struct input{
     char f;
@@ -66,12 +66,13 @@ void bomb(input *in, char level);
 void cheakInput(input *in);
 void insertNumber();
 int lcharAscii(char c);
-void dig(input *in);
+void dig(int a,int b);
 void flag(input *in);
 void rFlag(input *in);
 void quit(input *in);
+void rNum(int a, int b);
 void spreadOut(int x, int y);
-int gameover(char c,int count);
+int gameover(int count);
 int countBomb();
 
 int main(){
@@ -266,8 +267,8 @@ int minesweeper(char c){
         display();
         userInput(&in);
         cheakInput(&in);
-    }while(gameover(c,bombAmt));
-
+    }while(gameover(bombAmt));
+    display();
     printf("\n\nCongratulations! you have won the game!\n\n\n");
     
 }
@@ -283,9 +284,16 @@ int countBomb(){
     return count;
 }
 void rstMatrix(){
+
     for(int i=0;i<R;i++){
         for(int j=0;j<C;j++){
-            game[i][j]='G';
+            game[i][j]='W';
+        }
+    }
+
+    for(int i=1;i<R;i++){
+        for(int j=0;j<=C-1;j++){
+                game[i][j]='G';           
         }
     }
 }
@@ -390,12 +398,13 @@ void insertNumber(){
 void cheakInput(input *in){
     switch(in->f){
         case 'D':
-        dig(in);
+        dig(in->x,in->y);
         break;
         case 'F':
         flag(in);
         break;
         case 'R':
+        rNum(in->x,in->y);
         break;
         case 'r':
         rFlag(in);
@@ -407,43 +416,73 @@ void cheakInput(input *in){
         break;
     }
 }
-void dig(input *in){
-    if(game[in->x][in->y]=='B'||game[in->x][in->y]=='b'){ // digs a bomb
+void dig(int a, int b){
+    if(game[a][b]=='B'){ // digs a bomb
         printf("\n\nGameOver\n\n");
         exit(0);
     }
-    if(game[in->x][in->y]=='F'||(game[in->x][in->y]>=('n')&&game[in->x][in->y]<=('v'))||game[in->x][in->y]=='b'){ // tries to dig a flag
-        printf("\n\nYou can't dig flags\n\n");
+    if(game[a][b]=='F'||(game[a][b]>=('n')&&game[a][b]<=('v'))||game[a][b]=='b'){ // tries to dig a flag
+        printf("\n\nFlaggs skipped\n\n");
+        return;
     }
-    if(game[in->x][in->y]>=('N')&&game[in->x][in->y]<=('V')){ // tries to dig a number
-        game[in->x][in->y]=lcharAscii(game[in->x][in->y]);
+    if(game[a][b]>=('N')&&game[a][b]<=('V')){ // tries to dig a number
+        game[a][b]=lcharAscii(game[a][b]);
+        return;
     }
-    if(game[in->x][in->y]=='G'){
-        spreadOut(in->x,in->y);
+    if(game[a][b]=='G'){
+        spreadOut(a,b);
+        return;
     }
 }
 void flag(input *in){
     if(game[in->x][in->y]>=('N')&&game[in->x][in->y]<=('V')){ // if hidden numers are flagged, lowercase them
         game[in->x][in->y]=tolower(game[in->x][in->y]);
+        return;
     }
     if(game[in->x][in->y]==('B')){ // if hidden bombs are flagged, lowercase bomb
-        game[in->x][in->y]='b';
+        game[in->x][in->y]=tolower(game[in->x][in->y]);
+        return;
     }
-    if(game[in->x][in->y]>=('n')&&game[in->x][in->y]<=('v')||game[in->x][in->y]=='b'){
+    if(game[in->x][in->y]=='G'){
+        game[in->x][in->y]=tolower(game[in->x][in->y]);
+        return;
+    }
+    if((game[in->x][in->y]>=('n')&&game[in->x][in->y]<=('v'))||game[in->x][in->y]=='b'||game[in->x][in->y]=='g'){
         printf("\n\nYou cannot flag, Flagged Items\n\n");
+        return;
     }
 }
 void rFlag(input *in){
     if(game[in->x][in->y]>=('n')&&game[in->x][in->y]<=('v')){ // if hidden numers are unflagged flagged, uppercase them
         game[in->x][in->y]=toupper(game[in->x][in->y]);
+        return;
     }
     if(game[in->x][in->y]==('b')){ // if hidden bombs are flagged, uppercase them
-        game[in->x][in->y]='B';
+        game[in->x][in->y]=toupper(game[in->x][in->y]);
+        return;
+    }
+    if(game[in->x][in->y]=='g'){
+        game[in->x][in->y]=toupper(game[in->x][in->y]);
+        return;
     }
 }void quit(input *in){
     if(in->x==0&&in->y==0){
         printf("\n\nYou exited the game\n\n");
         exit(0);
+    }
+}
+void rNum(int a, int b){
+    if(game[a][b]>='1'&&game[a][b]<='9'){
+        dig(a-1, b-1);  // Top-left
+        dig(a-1, b);    // Top
+        dig(a-1, b+1);  // Top-right
+        dig(a, b-1);    // Left
+        dig(a, b+1);    // Right
+        dig(a+1, b-1);  // Bottom-left
+        dig(a+1, b);    // Bottom
+        dig(a+1, b+1);  // Bottom-right
+    }else{
+        printf("\nYou can only remove from numbers\n");
     }
 }
 int lcharAscii(char c){
@@ -492,20 +531,29 @@ void spreadOut(int x, int y) {
     // spreadOut(x+1, y+1);  // Bottom-right
 }
 
-int gameover(char c,int count){
-    int i,j,bombNum=0;
-    for(i=0;i<C;i++){
-        for(j=0;j<R;j++){
-            if(game[i][j]=='B'||game[i][j]=='b'||game[i][j]=='G'){
-                bombNum+=1;
+int gameover(int count){
+    int i,j,bFlagNum=0,numGF=0,numNum=0;
+    for(i=1;i<C-1;i++){
+        for(j=0;j<=R-2;j++){
+            if(game[i][j]=='b'){
+                bFlagNum+=1;
+            }
+            if(game[i][j]=='G'||game[i][j]=='g'||(game[i][j]=='N'&&game[i][j]=='V')){
+                numGF+=1;
+            }
+            if((game[i][j]=='n'&&game[i][j]=='v')){
+                numNum+=1;
             }
         }
     }
-    if(count==bombNum){
+    if(bFlagNum==count&&numGF==0&&numNum==0){
+        //printf("\n\n\nFlagged bomb: %d number of G/gf: %d Number of flagged number: %d\n\n\n",bFlagNum,numGF,numNum); to test
         return 0;
     }else{
+        //printf("\n\n\nFlagged bomb: %d number of G/gf: %d Number of flagged number: %d\n\n\n",bFlagNum,numGF,numNum);
         return 1;
     }
+
 }
 
 
@@ -546,7 +594,11 @@ void display(){//displayes the current matrix
                         white();
                         printf("\tW");
                         break;
-                    case 'f': //bomb 
+                    case 'b': //bomb 
+                        cyan();
+                        printf("\tF");
+                        break;
+                    case 'w':
                         cyan();
                         printf("\tF");
                         break;
@@ -555,7 +607,7 @@ void display(){//displayes the current matrix
                         printf("\tF");
                         break;
                     case 'B': // they don't need to know that there is a bomb there
-                        green();
+                        red();
                         printf("\tG");
                         break;
                     default:
@@ -581,15 +633,15 @@ void bomb(input *in, char level){
         exit(0);
     }
     do{
-        tempR=rand()%R;
-        tempC=rand()%C + 1;
+        tempR=rand()%(R-1);
+        tempC=rand()%(C-2) + 1;
         if((in->x!=tempC&&in->y!=tempR)){ // not bomb in first press
-            if(game[tempC][tempR]!='B'){ // if the value is already B there
+            if(game[tempC][tempR]!='B'&&game[tempC][tempR]!='W'){ // if the value is already B there
                 game[tempC][tempR]='B';
-                nBombs-=1;
+                --nBombs;
             }
         }
-    }while(nBombs>=0);
+    }while(nBombs>0);
 }
 
 void rst(){
