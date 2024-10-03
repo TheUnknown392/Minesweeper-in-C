@@ -3,14 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 
 // sets row and colunm of matrix
-#define R 16
-#define C 16
+#define R 10
+#define C 10
 // three levels of dfficulty
-#define EASY 15
-#define MEDIUM 22
-#define HARD 30
+#define EASY (int)sqrt(R*C)
+#define MEDIUM R+C
+#define HARD (int)sqrt(R*C)+R+C
 // the extention of file
 #define fileExten "MINESWEEPERPLAYER.txt"
 
@@ -310,15 +311,8 @@ int minesweeper(char c,playerInfo *active){
     printf("\n\nCongratulations! you have won the game!\n\n\n");
 }
 void rstMatrix(){
-
-    for(int i=0;i<C;i++){
-        for(int j=0;j<R;j++){
-            game[i][j]='W';
-        }
-    }
-
-    for(int i=1;i<C;i++){
-        for(int j=0;j<=R-1;j++){
+    for(int i=0;i<R;i++){
+        for(int j=0;j<C;j++){
                 game[i][j]='G';           
         }
     }
@@ -326,11 +320,12 @@ void rstMatrix(){
 
 void userInput(input *in){
         do{
-            printf("\n [Q 0,0] to quit anywhere in during game\n[D <row>,<colunm> to dig]\n[F <row>,<colunm> to flag]\n[C <row>,<colunm>] to remove from number\n[r <row>,<colunm] to remove flag\ne.g. D 1,0 to dig the top left thing\n\n");
+            printf("\n [Q 0,0] to quit anywhere in during game\n[D <row>,<colunm> to dig]\n[F <row>,<colunm> to flag]\n[R <row>,<colunm>] to remove from number\n[r <row>,<colunm] to remove flag\ne.g. D 1,0 to dig the top left thing\n\n");
             scanf(" %c %d,%d",&in->f,&in->x,&in->y);
-        }while(in->f!='Q'&&in->f!='D'&&in->f!='F'&&in->f!='C'&&in->f!='Q'&&in->f!='r'&&in->x>=0&&in->x<=10&&in->y>=0&&in->y<=9);
-        
-        if(in->f=='Q'&&in->x==0&&in->y==0){
+            // in->x-=1; // corrects the user input from display by subtracting 1 to cordinate value being saved
+            // in->y-=1;
+        }while(in->f!='Q'&&in->f!='D'&&in->f!='F'&&in->f!='Q'&&in->f!='r'&&in->f!='R');
+        if(in->f=='Q'&&(in->x)==0&&(in->y)==0){ // corrects the user inputted value to get 0,0
             printf("You have exited the game");
             exit(0);
         }
@@ -365,7 +360,7 @@ void surrounding(int c, int r){
     }
 
     // Check right boundary
-    if(pr >= C-1){
+    if(pr >= C){
         ch[0][2] = 'Z';
         ch[1][2] = 'Z';
         ch[2][2] = 'Z';
@@ -430,7 +425,7 @@ void cheakInput(input *in){
             case 'F':
             flag(in);
             break;
-            case 'C':
+            case 'R':
             rNum(in->x,in->y);
             break;
             case 'r':
@@ -448,11 +443,11 @@ void dig(int a, int b){
         printf("\n\nGameOver\n\n");
         exit(0);
     }
-    if(game[a][b]=='F'||(game[a][b]>=('n')&&game[a][b]<=('v'))||game[a][b]=='b'){ // tries to dig a flag
+    if(game[a][b]=='F'||(game[a][b]>=('n')&&game[a][b]<=('u'))||game[a][b]=='b'){ // tries to dig a flag
         printf("\n\nFlaggs skipped\n\n");
         return;
     }
-    if(game[a][b]>=('N')&&game[a][b]<=('V')){ // tries to dig a number
+    if(game[a][b]>=('N')&&game[a][b]<=('U')){ // tries to dig a number
         game[a][b]=lcharAscii(game[a][b]);
         return;
     }
@@ -462,7 +457,7 @@ void dig(int a, int b){
     }
 }
 void flag(input *in){
-    if(game[in->x][in->y]>=('N')&&game[in->x][in->y]<=('V')){ // if hidden numers are flagged, lowercase them
+    if(game[in->x][in->y]>=('N')&&game[in->x][in->y]<=('U')){ // if hidden numers are flagged, lowercase them
         game[in->x][in->y]=tolower(game[in->x][in->y]);
         return;
     }
@@ -474,13 +469,13 @@ void flag(input *in){
         game[in->x][in->y]=tolower(game[in->x][in->y]);
         return;
     }
-    if((game[in->x][in->y]>=('n')&&game[in->x][in->y]<=('v'))||game[in->x][in->y]=='b'||game[in->x][in->y]=='g'){
+    if((game[in->x][in->y]>=('n')&&game[in->x][in->y]<=('u'))||game[in->x][in->y]=='b'||game[in->x][in->y]=='g'){
         printf("\n\nYou cannot flag, Flagged Items\n\n");
         return;
     }
 }
 void rFlag(input *in){
-    if(game[in->x][in->y]>=('n')&&game[in->x][in->y]<=('v')){ // if hidden numers are unflagged flagged, uppercase them
+    if(game[in->x][in->y]>=('n')&&game[in->x][in->y]<=('u')){ // if hidden numers are unflagged flagged, uppercase them
         game[in->x][in->y]=toupper(game[in->x][in->y]);
         return;
     }
@@ -506,7 +501,7 @@ int rNum(int a, int b){
         for(int i=0;i<3;i++){
             for(int j=0;j<3;j++){
                 if(ch[i][j]!='Z'){
-                    if((ch[i][j]>='n'&&ch[i][j]<='v')||ch[i][j]=='b'||ch[i][j]=='g'){
+                    if((ch[i][j]>='n'&&ch[i][j]<='u')||ch[i][j]=='b'||ch[i][j]=='g'){
                         countFlag+=1;// counts flags in surrounding.
                     }
                 }
@@ -534,7 +529,7 @@ int rNum(int a, int b){
 }
 
 int lcharAscii(char c){
-    if(c>='N'&&c<='V'){// changes lower n to ascii numbers
+    if(c>='N'&&c<='U'){// changes lower n to ascii numbers
         return c-29; 
     }
     return 0;
@@ -542,7 +537,7 @@ int lcharAscii(char c){
 
 void spreadOut(int x, int y) {
     // Base condition: check if out of bounds
-    if (x < 1 || x >= R || y < 0 || y >= C-1) {
+    if (x<0||x>=R||y<0||y>=C) {
         return;
     }
 
@@ -552,12 +547,12 @@ void spreadOut(int x, int y) {
     }
 
     // Check if the tile is not grass ('G') or a number (0-9)
-    if (game[x][y] != 'G' && (game[x][y] >= '0' && game[x][y] <= '9')) {
+    if (game[x][y] >= '0' && game[x][y] <= '9') {
         return;
     }
 
-    // Optionally handle other cases (like 'N'-'V') if needed
-    if (game[x][y] >= 'N' && game[x][y] <= 'V') {
+    // Optionally handle other cases (like 'N'-'U') if needed
+    if (game[x][y] >= 'N' && game[x][y] <= 'U') {
         game[x][y] = lcharAscii(game[x][y]);  // Handle ASCII conversion here
         return;
     }
@@ -581,9 +576,9 @@ void spreadOut(int x, int y) {
 
 int gameover(playerInfo *active){
     int i,j,numGF=0;
-    for(i=1;i<R;i++){
-        for(j=0;j<=C-2;j++){
-            if(game[i][j]=='G'||game[i][j]=='g'||(game[i][j]>='N'&&game[i][j]<='V')){
+    for(i=0;i<R;i++){
+        for(j=0;j<=C;j++){
+            if(game[i][j]=='G'||game[i][j]=='g'||(game[i][j]>='N'&&game[i][j]<='U')){
                 numGF+=1;
             }
         }
@@ -601,23 +596,23 @@ int gameover(playerInfo *active){
 
 void display(){//displayes the current matrix
     int i,j;
-    for(i=0;i<R;i++){
+    for(i=-1;i<R;i++){
         white();
-        printf("%d",i);
-        for(j=0;j<C-1;j++){
-            if(i==0){
+        (i==-1)?(printf(" ")):(printf("%d",i));
+        for(j=0;j<C;j++){
+            if(i==-1){
                 printf("\t%d",j);
-                if(j==C-2){
+                if(j==C){
                     printf("\n");
                 }
             }
-            if(i!=0){
-                if(game[i][j]>='N'&&game[i][j]<='V'){ // hidden number
+            if(i!=0||i!=1){
+                if(game[i][j]>='N'&&game[i][j]<='U'){ // hidden number
                     green();
                     printf("\tG");
                     continue;
                 }
-                if(game[i][j]>=('n')&&game[i][j]<=('v')||game[i][j]=='b'){ // flagged numbers
+                if(game[i][j]>=('n')&&game[i][j]<=('u')||game[i][j]=='b'){ // flagged numbers
                     purple();
                     printf("\tF");
                     continue;
@@ -675,10 +670,10 @@ void bomb(input *in, char level){
         exit(0);
     }
     do{
-        tempC=rand()%(C-1);
-        tempR=rand()%(R-1) + 1;
+        tempC=rand()%C;
+        tempR=rand()%R;
         if((in->x!=tempR&&in->y!=tempC)){ // not bomb in first press
-            if(game[tempR][tempC]!='B'&&game[tempR][tempC]!='W'){ // if the value is already B there
+            if(game[tempR][tempC]!='B'){ // if the value is already B there
                 game[tempR][tempC]='B';
                 --nBombs;
             }
