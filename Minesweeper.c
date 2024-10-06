@@ -3,49 +3,50 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <math.h>
 
 // sets row and colunm of matrix
-#define R 10
-#define C 10
-// three levels of dfficulty
-#define EASY (int)sqrt(R*C)
-#define MEDIUM R+C
-#define HARD (int)sqrt(R*C)+R+C
+#define R 15
+#define C 15
+// three levels of dfficulty according to number of bombs
+#define EASY 15
+#define MEDIUM 30
+#define HARD 45
 // the extention of file
 #define fileExten "MINESWEEPERPLAYER.txt"
 
-typedef struct input{
+typedef struct input{// game input
     char f;
     int x,y;
 } input;
 
-typedef struct t{
+typedef struct t{ // display in hh:mm:ss form
     int hh;
     int mm;
     int ss;
 }t;
 
-typedef struct score{
+typedef struct score{ // to store time in seconds in file
     int eTime;
     int mTime;
     int hTime;
 }score;
 
-typedef struct playCount{
+typedef struct playCount{ // to store how much play count of users
     int totalPlayed,totalwon,lostOrAbandoned;
 }playCount;
 
-typedef struct playerInfo{
+typedef struct playerInfo{ // to store player details
     char name[50],password[50];
     score pScore;
     playCount pCount;
 }playerInfo;
 
-time_t start,end;
-char game[R][C];
-char ch[3][3];
+playerInfo active; // store detail of active or logged in player
+time_t start,end; // sore start and end time
+char game[R][C]; // store the detail of game board
+char ch[3][3]; // to store temporary data of surrounding relative to some cordinate
 
+//colors
 void rst();
 void green();
 void black();
@@ -57,76 +58,92 @@ void blue();
 void redBold();
 void cyan();
 
-void seeTime(t *a,int info);
-int minesweeper(char c,playerInfo *active);
-playerInfo mainMenu();
-int signup();
-int newUser(playerInfo *data);
-playerInfo login();
-int innit();
+void seeTime(t *a,int info); // turns seconds into hh:mm:ss
+int minesweeper(char c); // actual process of minsweeper game is in here
+playerInfo mainMenu(); // menue to create, log in your minsweeper account and returns value of active player
+int signup(); // sign up
+playerInfo login(); // log in
 
-void rstMatrix();
-void userInput(input *in);
-void display();
-void bomb(input *in, char level);
-void cheakInput(input *in);
-void insertNumber();
-int lcharAscii(char c);
-void dig(int a,int b);
-void flag(input *in);
-void rFlag(input *in);
-void quit(input *in);
-int rNum(int a, int b);
-void spreadOut(int x, int y);
-int gameover(playerInfo *active);
+void rstMatrix(); // puts 'G' value in mineweeper matrix (game)
+void insertBombNumber(input *in, char level); // insert bomb and number in matrix
+void surrounding(int r, int c);// returns the value of surrounding boxes to ch[][]
+void userInput(input *in); // takes user input
+void display(); // displays matrix board
+void cheakInput(input *in); // cheaks given input
+int lcharAscii(char c); // changes unflagged hidden numbers into int
+void dig(int a,int b); // digs
+void flag(input *in); // flags
+void rFlag(input *in); // removes flags
+void quit(input *in); // quit
+int rNum(int a, int b); // remove from number
+void spreadOut(int x, int y); // when digged, spreads out until a hidden number is enfountered
+int gameover();
+void inputFile();// inputs current active player information to file
 
 int main(){
-    playerInfo active = mainMenu();
+    active = mainMenu();
+    if(active.pCount.totalwon+active.pCount.lostOrAbandoned!=active.pCount.totalPlayed){ // corrects suprise quit
+        active.pCount.lostOrAbandoned+=active.pCount.totalPlayed-(active.pCount.totalwon+active.pCount.lostOrAbandoned);
+        inputFile();
+    }
     printf("\nlogged in with\nUser:%s\n\n",active.name);
-    char g='a';
+
+    char g='\0'; 
     int Time;
+
     do{
         do{
-            printf("Difficulty: e=easy m=medium h=hard\nType [<difficulty>] to start a game.\n[s] for highest score in each game\n");
+            printf("Difficulty: e=easy m=medium h=hard\nType [<difficulty>] to start a game.\n[d] for account details\n");
             scanf(" %c",&g);
-        }while( (g!='e')&&(g!='m')&&(g!='h')&&(g!='s'));
-        if(g=='s'){
+        }while( (g!='e')&&(g!='m')&&(g!='h')&&(g!='d'));
+        if(g=='d'){
             t scoreTime;
+            printf("\nPlayername: %s\nPlayer Scores: ",active.name);
             seeTime(&scoreTime, active.pScore.eTime);
             printf("e: %d:%d:%d\t",scoreTime.hh,scoreTime.mm,scoreTime.ss);
             seeTime(&scoreTime, active.pScore.mTime);
             printf("m: %d:%d:%d\t",scoreTime.hh,scoreTime.mm,scoreTime.ss);
             seeTime(&scoreTime, active.pScore.hTime);
             printf("h: %d:%d:%d\n",scoreTime.hh,scoreTime.mm,scoreTime.ss);
+            printf("Total played: %d\nTotal win: %d\nTotal left of lost: %d\n\n",active.pCount.totalPlayed,active.pCount.totalwon,active.pCount.lostOrAbandoned);
         }
-    }while(g=='s');
-    minesweeper(g,&active);
-    Time=difftime(end,start);
-    switch(g){
-        case 'e':
-            if(Time<active.pScore.eTime){
-                active.pScore.eTime=Time;
-            }
-            break;
-        case 'm':
-            if(Time<active.pScore.mTime){
-                active.pScore.mTime=Time;
-            }
-            break;
-        case 'h':
-            if(Time<active.pScore.hTime){
-                active.pScore.hTime=Time;
-            }
-            break;
-        default:
-            printf("Error in moddifying high score");
-        break;
-    }
+    }while(g=='d');
+    minesweeper(g);
+    	Time=difftime(end,start);
+    	switch(g){
+        	case 'e':
+            	if(Time<active.pScore.eTime){
+                	active.pScore.eTime=Time;
+            	}
+            	break;
+        	case 'm':
+            	if(Time<active.pScore.mTime){
+                	active.pScore.mTime=Time;
+            	}
+            	break;
+        	case 'h':
+            	if(Time<active.pScore.hTime){
+                	active.pScore.hTime=Time;
+            	}
+            	break;
+	        default:
+            		printf("Error in moddifying high score");
+	        break;
+	}
+	active.pCount.totalwon+=1;
+   inputFile();
 
+    return 0;
+}
+
+void inputFile(){ 
     char temp[100];
     strcpy(temp,active.name);
     strcat(temp,fileExten);
     FILE*fp=fopen(temp,"w");
+    if(fp==NULL){
+        printf("\n\nNo file found -> inputFile()\n\n");
+    }
     fprintf(
         fp, 
         "%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\n",
@@ -137,22 +154,19 @@ int main(){
         active.pScore.hTime,
         active.pCount.totalPlayed,
         active.pCount.totalwon,
-        active.pCount.totalPlayed-active.pCount.totalwon
+        active.pCount.lostOrAbandoned
     );
     fclose(fp);
-    return 0;
 }
-
-
 
 
 playerInfo mainMenu(){
     int a=0;
     up:
     do{
-        printf("press 1 to log in\npress 2 to sign up\nPress 3 to Innitialize\npress 4 to exit\n");
+        printf("press 1 to log in\npress 2 to sign up\nPress 3 to to exit\n");
         scanf("%d",&a);
-    }while(a<=1&&a>=4);
+    }while(!(a>=1&&a<=3));
 
     switch (a){
         case 1:
@@ -163,14 +177,6 @@ playerInfo mainMenu(){
             goto up;
             break;
         case 3:
-            if(innit()){
-                printf("\nInnitialization sucessfull\n");
-            }else{
-                printf("\nInnitialization unsucessfull\n");
-            }
-            goto up;
-            break;
-        case 4:
             exit(0);
             break;
         default:
@@ -192,7 +198,6 @@ int signup(){
     char temp[100];  
     strcpy(temp, newSignin.name);
     strcat(temp, fileExten);
-
     FILE *fp;
     fp = fopen(temp, "w");
     if(fp == NULL){
@@ -205,9 +210,9 @@ int signup(){
         "%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\n",
         newSignin.name,
         newSignin.password,
-        0,
-        0,
-        0,
+        32000, // lowest score. 0 being highest score
+        32000,
+        32000,
         0,
         0,
         0
@@ -260,19 +265,6 @@ playerInfo login(){
     }
 }
 
-int innit(){
-    FILE *fp;
-    char temp[50];
-    strcpy(temp,"TheUnknown");
-    strcat(temp,fileExten);
-    fp=fopen(temp,"w");
-    if(fp==NULL){
-        return 0;
-    }
-    fprintf(fp,"%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\n","TheUnknown","TheUnknown",0,0,0,0,0,0);
-    fclose(fp);
-    return 1;
-}
 
 void seeTime(t *a, int info) {
     a->hh = info / 3600;         
@@ -284,7 +276,7 @@ void seeTime(t *a, int info) {
 
 
 
-int minesweeper(char c,playerInfo *active){
+int minesweeper(char c){
     int bombAmt;
     input in;
     int gameStatus;
@@ -296,19 +288,20 @@ int minesweeper(char c,playerInfo *active){
     do{
         userInput(&in);
     }while(in.f!='D');
+    active.pCount.totalPlayed+=1;
+    inputFile();
     srand(time(NULL));
-    bomb(&in,c);
-    insertNumber();
+    insertBombNumber(&in,c);
     spreadOut(in.x,in.y);
-    active->pCount.totalPlayed+=1;
     time(&start);
     do{
         display();
         userInput(&in);
         cheakInput(&in);
-    }while(gameover(active));
+    }while(gameover());
     display();
     printf("\n\nCongratulations! you have won the game!\n\n\n");
+    return 1;
 }
 void rstMatrix(){
     for(int i=0;i<R;i++){
@@ -320,103 +313,95 @@ void rstMatrix(){
 
 void userInput(input *in){
         do{
+            inputAgain:
             printf("\n [Q 0,0] to quit anywhere in during game\n[D <row>,<colunm> to dig]\n[F <row>,<colunm> to flag]\n[R <row>,<colunm>] to remove from number\n[r <row>,<colunm] to remove flag\ne.g. D 1,0 to dig the top left thing\n\n");
             scanf(" %c %d,%d",&in->f,&in->x,&in->y);
             // in->x-=1; // corrects the user input from display by subtracting 1 to cordinate value being saved
             // in->y-=1;
-        }while(in->f!='Q'&&in->f!='D'&&in->f!='F'&&in->f!='Q'&&in->f!='r'&&in->f!='R');
-        if(in->f=='Q'&&(in->x)==0&&(in->y)==0){ // corrects the user inputted value to get 0,0
-            printf("You have exited the game");
-            exit(0);
+        }while(
+            (in->f!='Q')&&
+            (in->f!='D')&&
+            (in->f!='F')&&
+            (in->f!='r')&&
+            (in->f!='R')
+        );
+        if (!(in->x >= 0 && in->x < R && in->y >= 0 && in->y < C)){
+            printf("\nMake sure your co-ordinates are within the matrix\n");
+            goto inputAgain;
         }
 }
 
-void surrounding(int c, int r){
+void surrounding(int r, int c){
     int mc=c-1,mr=r-1,pc=c+1,pr=r+1,i,j;
     for(i=0;i<3;i++){
         for(j=0;j<3;j++){
             ch[i][j]='\0';
         }
     }
+
+    //0,0  0,1  0,2     mr,mc   mr,c    mr pc
+    //1,0  1,1  1,2     r,mc    r,c     r,pc
+    //2,0  2,1  2,2     pr,mc   pr,c    pr,pc
+
+
     // cheak top boundary
-    if(mc < 0){
+    if(mr < 0){
         ch[0][0] = 'Z';
         ch[0][1] = 'Z';
         ch[0][2] = 'Z';
     }
 
     // Check bottom boundary
-    if(pc >= R){
+    if(pr >= R){
         ch[2][0] = 'Z';
         ch[2][1] = 'Z';
         ch[2][2] = 'Z';
     }
 
     // Check left boundary
-    if(mr < 0){
+    if(mc < 0){
         ch[0][0] = 'Z';
         ch[1][0] = 'Z';
         ch[2][0] = 'Z';
     }
 
     // Check right boundary
-    if(pr >= C){
+    if(pc >= C){
         ch[0][2] = 'Z';
         ch[1][2] = 'Z';
         ch[2][2] = 'Z';
     }
 
     if(ch[0][0]!='Z'){
-        ch[0][0]=game[mc][mr];
+        ch[0][0]=game[mr][mc];
     }
     if(ch[0][1]!='Z'){
-        ch[0][1]=game[mc][r];
+        ch[0][1]=game[mr][c];
     }
     if(ch[0][2]!='Z'){
-        ch[0][2]=game[mc][pr];
+        ch[0][2]=game[mr][pc];
     }
     if(ch[1][0]!='Z'){
-        ch[1][0]=game[c][mr];  
+        ch[1][0]=game[r][mc];  
     }
     if(ch[1][1]!='Z'){
-        ch[1][1]=game[c][r];  
+        ch[1][1]=game[r][c];  
     }
     if(ch[1][2]!='Z'){
-        ch[1][2]=game[c][pr];
+        ch[1][2]=game[r][pc];
     }
     if(ch[2][0]!='Z'){
-        ch[2][0]=game[pc][mr];
+        ch[2][0]=game[pr][mc];
     }
     if(ch[2][1]!='Z'){
-        ch[2][1]=game[pc][r];
+        ch[2][1]=game[pr][c];
     }
     if(ch[2][2]!='Z'){
-        ch[2][2]=game[pc][pr];
+        ch[2][2]=game[pr][pc];
     }
 
 }
-void insertNumber(){
-    int i,j,k,l,count=0;
-    for(i=0;i<R;i++){ // cycles through all matrix except there is a bomb
-        for(j=0;j<C;j++){
-            if(game[i][j]!='B'){
-                surrounding(i,j); // takes surrounding info
-                for(k=0;k<3;k++){
-                    for(l=0;l<3;l++){
-                        if(ch[k][l]=='B'){ // if B found then count increases
-                            count+=1;
-                        }
-                    }
-                }
-                if(count!=0){
-                    game[i][j]='M'+count;
-                    count=0;
-                }
-            }
-        }
-    }
-    
-}
+
 void cheakInput(input *in){
         switch(in->f){
             case 'D':
@@ -441,6 +426,8 @@ void cheakInput(input *in){
 void dig(int a, int b){
     if(game[a][b]=='B'){ // digs a bomb
         printf("\n\nGameOver\n\n");
+	    active.pCount.lostOrAbandoned+=1;
+	    inputFile();
         exit(0);
     }
     if(game[a][b]=='F'||(game[a][b]>=('n')&&game[a][b]<=('u'))||game[a][b]=='b'){ // tries to dig a flag
@@ -467,7 +454,7 @@ void flag(input *in){
     }
     if(game[in->x][in->y]=='G'){
         game[in->x][in->y]=tolower(game[in->x][in->y]);
-        return;
+        return; 
     }
     if((game[in->x][in->y]>=('n')&&game[in->x][in->y]<=('u'))||game[in->x][in->y]=='b'||game[in->x][in->y]=='g'){
         printf("\n\nYou cannot flag, Flagged Items\n\n");
@@ -487,9 +474,12 @@ void rFlag(input *in){
         game[in->x][in->y]=toupper(game[in->x][in->y]);
         return;
     }
-}void quit(input *in){
+}
+void quit(input *in){
     if(in->x==0&&in->y==0){
         printf("\n\nYou exited the game\n\n");
+	    active.pCount.lostOrAbandoned++;
+    	inputFile();
         exit(0);
     }
 }
@@ -498,7 +488,8 @@ int rNum(int a, int b){
     if(game[a][b]>='1'&&game[a][b]<='9'){
         int countFlag=0;
         surrounding(a,b);
-        for(int i=0;i<3;i++){
+        
+	for(int i=0;i<3;i++){
             for(int j=0;j<3;j++){
                 if(ch[i][j]!='Z'){
                     if((ch[i][j]>='n'&&ch[i][j]<='u')||ch[i][j]=='b'||ch[i][j]=='g'){
@@ -546,45 +537,40 @@ void spreadOut(int x, int y) {
         return;
     }
 
-    // Check if the tile is not grass ('G') or a number (0-9)
-    if (game[x][y] >= '0' && game[x][y] <= '9') {
+    // Check if the tile is number (0-9)
+    if (game[x][y]>='0'&&game[x][y]<='9') {
         return;
     }
 
     // Optionally handle other cases (like 'N'-'U') if needed
-    if (game[x][y] >= 'N' && game[x][y] <= 'U') {
-        game[x][y] = lcharAscii(game[x][y]);  // Handle ASCII conversion here
+    if (game[x][y]>='N'&&game[x][y]<='U') {
+        game[x][y]=lcharAscii(game[x][y]);  // Handle ASCII conversion here
         return;
     }
 
-    if(game[x][y] >= '0' && game[x][y] <= '9'){
+    if(game[x][y]>='0'&&game[x][y]<='9'){
         return;
     }
     // Mark the current tile as revealed (whitespace or revealed grass)
-    game[x][y] = 'W';
+    game[x][y]='W';
 
     // Recursively spread to adjacent cells (4 directions)
-    // spreadOut(x-1, y-1);  // Top-left
     spreadOut(x-1, y);    // Top
-    // spreadOut(x-1, y+1);  // Top-right
     spreadOut(x, y-1);    // Left
     spreadOut(x, y+1);    // Right
-    // spreadOut(x+1, y-1);  // Bottom-left
     spreadOut(x+1, y);    // Bottom
-    // spreadOut(x+1, y+1);  // Bottom-right
 }
 
-int gameover(playerInfo *active){
+int gameover(){
     int i,j,numGF=0;
     for(i=0;i<R;i++){
-        for(j=0;j<=C;j++){
+        for(j=0;j<C;j++){
             if(game[i][j]=='G'||game[i][j]=='g'||(game[i][j]>='N'&&game[i][j]<='U')){
                 numGF+=1;
             }
         }
     }
-    if(numGF==0){// if everything that was diggable is digged
-        active->pCount.totalwon+=1;
+    if(numGF==0){ // if everything that was diggable is digged
         time(&end);
         return 0;
     }else{
@@ -594,7 +580,7 @@ int gameover(playerInfo *active){
 }
 
 
-void display(){//displayes the current matrix
+void display(){
     int i,j;
     for(i=-1;i<R;i++){
         white();
@@ -602,11 +588,11 @@ void display(){//displayes the current matrix
         for(j=0;j<C;j++){
             if(i==-1){
                 printf("\t%d",j);
-                if(j==C){
+                if(j==C-1){
                     printf("\n");
                 }
             }
-            if(i!=0||i!=1){
+            if(i>=0){
                 if(game[i][j]>='N'&&game[i][j]<='U'){ // hidden number
                     green();
                     printf("\tG");
@@ -644,7 +630,7 @@ void display(){//displayes the current matrix
                         printf("\tF");
                         break;
                     case 'B': // they don't need to know that there is a bomb there
-                        red();
+                        green();
                         printf("\tG");
                         break;
                     default:
@@ -657,8 +643,9 @@ void display(){//displayes the current matrix
     rst();
 }
 
-void bomb(input *in, char level){
-    int nBombs,tempC,tempR;
+void insertBombNumber(input *in, char level){
+    int nBombs,tempC,tempR, i,j,k,l,count=0;
+    //bomb
     if(level=='e'){
         nBombs=EASY;
     }else if(level=='m'){
@@ -679,28 +666,31 @@ void bomb(input *in, char level){
             }
         }
     }while(nBombs>0);
-}
 
-// void inputFile(playerInfo active,int winLoss){
-//     char temp[100];
-//     strcpy(temp,active.name);
-//     strcat(temp,fileExten);
-//     FILE*fp=fopen(temp,"w");
-//     active.pCount.lostOrAbandoned+=winLoss;
-//     fprintf(
-//         fp, 
-//         "%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\n",
-//         active.name,
-//         active.password,
-//         active.pScore.eTime,
-//         active.pScore.mTime,
-//         active.pScore.hTime,
-//         active.pCount.totalPlayed,
-//         active.pCount.totalwon,
-//         active.pCount.lostOrAbandoned
-//     );
-//     fclose(fp);
-// }
+    //number
+    for(i=0;i<R;i++){ // cycles through all matrix except there is a bomb
+        for(j=0;j<C;j++){
+            if(game[i][j]!='B'){
+                surrounding(i,j); // takes surrounding info
+                for(k=0;k<3;k++){
+                    for(l=0;l<3;l++){
+                        if(ch[k][l]=='B'){ // if B found then count increases
+                            count+=1;
+                        }
+                    }
+                }
+                if(count!=0){
+                    game[i][j]='M'+count;
+                    count=0;
+                }
+            }
+        }
+    }
+
+
+
+
+}
 
 void rst(){
     printf("\033[0;00m");
