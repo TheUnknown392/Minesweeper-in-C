@@ -70,7 +70,7 @@ void surrounding(int r, int c);// returns the value of surrounding boxes to ch[]
 void userInput(input *in); // takes user input
 void display(); // displays matrix board
 void cheakInput(input *in); // cheaks given input
-int lcharAscii(char c); // changes unflagged hidden numbers into int
+int charNumber(char c); // changes unflagged hidden numbers into int
 void dig(int a,int b); // digs
 void flag(input *in); // flags
 void rFlag(input *in); // removes flags
@@ -435,7 +435,7 @@ void dig(int a, int b){
         return;
     }
     if(game[a][b]>=('N')&&game[a][b]<=('U')){ // tries to dig a number
-        game[a][b]=lcharAscii(game[a][b]);
+        game[a][b]=charNumber(game[a][b]);
         return;
     }
     if(game[a][b]=='G'){
@@ -519,7 +519,7 @@ int rNum(int a, int b){
     }
 }
 
-int lcharAscii(char c){
+int charNumber(char c){
     if(c>='N'&&c<='U'){// changes lower n to ascii numbers
         return c-29; 
     }
@@ -544,7 +544,7 @@ void spreadOut(int x, int y) {
 
     // Optionally handle other cases (like 'N'-'U') if needed
     if (game[x][y]>='N'&&game[x][y]<='U') {
-        game[x][y]=lcharAscii(game[x][y]);  // Handle ASCII conversion here
+        game[x][y]=charNumber(game[x][y]);  // Handle ASCII conversion here
         return;
     }
 
