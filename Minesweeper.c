@@ -279,7 +279,6 @@ void seeTime(t *a, int info) {
 int minesweeper(char c){
     int bombAmt;
     input in;
-    int gameStatus;
     rstMatrix();
     display();
     red();
