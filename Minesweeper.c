@@ -142,7 +142,7 @@ void inputFile(){
     strcat(temp,fileExten);
     FILE*fp=fopen(temp,"w");
     if(fp==NULL){
-        printf("\n\nNo file found -> inputFile()\n\n");
+        printf("\n\nNo file found\n\n");
     }
     fprintf(
         fp, 
@@ -201,7 +201,7 @@ int signup(){
     FILE *fp;
     fp = fopen(temp, "w");
     if(fp == NULL){
-        printf("Error opening file for user -> signup()\n");
+        printf("Error opening file for user\n");
         return 0;
     }
 
@@ -239,7 +239,7 @@ playerInfo login(){
 
     FILE *fp = fopen(temp, "r");
     if(fp == NULL){
-        printf("Error opening file for user -> searchUser()\n");
+        printf("Error opening file for user\n");
         exit(0);
     }
 
@@ -260,7 +260,7 @@ playerInfo login(){
     if(strcmp(password, search.password) == 0){
         return search;
     } else {
-        printf("\nIncorrect password or username -> searchUser()\n");
+        printf("\nIncorrect password or username\n");
         exit(0);
     }
 }
@@ -313,7 +313,7 @@ void rstMatrix(){
 void userInput(input *in){
         do{
             inputAgain:
-            printf("\n [Q 0,0] to quit anywhere in during game\n[D <row>,<colunm> to dig]\n[F <row>,<colunm> to flag]\n[R <row>,<colunm>] to remove from number\n[r <row>,<colunm] to remove flag\ne.g. D 1,0 to dig the top left thing\n\n");
+            printf("\n[Q 0,0] to quit anywhere in during game\n[D <row>,<colunm> to dig]\n[F <row>,<colunm> to flag]\n[R <row>,<colunm>] to remove from number\n[r <row>,<colunm] to remove flag\ne.g. D 0,0 to dig the top left thing\n\n");
             scanf(" %c %d,%d",&in->f,&in->x,&in->y);
             // in->x-=1; // corrects the user input from display by subtracting 1 to cordinate value being saved
             // in->y-=1;
@@ -509,11 +509,11 @@ int rNum(int a, int b){
             dig(a+1, b+1);  // Bottom-right
 	        return 1;
         }else{
-            printf("\nYou can only remove from numbers if you have proper flag\nor error in ->rNum(countFlag: %d, game[a][b] num=%d)\n",countFlag,game[a][b]-'0');
+            printf("\nYou can only remove from numbers if you have proper flag\n");
             return 0;
         }
 	}else{
-    	printf("\nYou can only remove from numbers\nor error in ->rNum()\n");
+    	printf("\nYou can only remove from numbers\n");
 	    return 2;
     }
 }
@@ -652,7 +652,7 @@ void insertBombNumber(input *in, char level){
     }else if(level=='h'){
         nBombs=HARD;
     }else{
-        printf("Error in bomb()");
+        printf("Error creating bomb");
         exit(0);
     }
     do{
