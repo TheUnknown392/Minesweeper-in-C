@@ -42,97 +42,50 @@ typedef struct playerInfo{ // to store player details
 }playerInfo;
 
 playerInfo active; // store detail of active or logged in player
-time_t start,end; // sore start and end time
+time_t start,end; // store start and end time
 char game[R][C]; // store the detail of game board
 char ch[3][3]; // to store temporary data of surrounding relative to some cordinate
 
 //colors
 void rst();
 void green();
-void black();
 void red();
-void yellow();
 void white();
 void purple();
 void blue();
-void redBold();
 void cyan();
 
-void seeTime(t *a,int info); // turns seconds into hh:mm:ss
-int minesweeper(char c); // actual process of minsweeper game is in here
+playerInfo login(); // log in
 playerInfo mainMenu(); // menue to create, log in your minsweeper account and returns value of active player
 int signup(); // sign up
-playerInfo login(); // log in
-
-void rstMatrix(); // puts 'G' value in mineweeper matrix (game)
-void insertBombNumber(input *in, char level); // insert bomb and number in matrix
-void surrounding(int r, int c);// returns the value of surrounding boxes to ch[][]
-void userInput(input *in); // takes user input
-void display(); // displays matrix board
-void cheakInput(input *in); // cheaks given input
-int charNumber(char c); // changes unflagged hidden numbers into int
-void dig(int a,int b); // digs
-void flag(input *in); // flags
-void rFlag(input *in); // removes flags
-void quit(input *in); // quit
-int rNum(int a, int b); // remove from number
-void spreadOut(int x, int y); // when digged, spreads out until a hidden number is enfountered
-int gameover();
+int minesweeper(char gameHardness); // actual process of minsweeper game is in here
+char menueOption(); // to choose between menu
 void inputFile();// inputs current active player information to file
+void rectifyFile();// corrects suprise quits
+void seeTime(t *a,int info); // turns seconds into hh:mm:ss
+void updateIfHighscore(char gamemode);//updates the player's score if there is high score
+
+int gameover();
+int rNum(int a, int b); // remove from number
+int charNumber(char c); // changes unflagged hidden numbers into int
+void rstMatrix(); // puts 'G' value in mineweeper matrix (game)
+void insertBombNumber(input *inputValue, char level); // insert bomb and number in matrix
+void surrounding(int r, int c);// returns the value of surrounding boxes to ch[][]
+void userInput(input *inputValue); // takes user input
+void display(); // displays matrix board
+void cheakInput(input *inputValue); // cheaks given input
+void dig(int a,int b); // digs
+void flag(input *inputValue); // flags
+void rFlag(input *inputValue); // removes flags
+void quit(input *inputValue); // quit
+void spreadOut(int x, int y); // when digged, spreads out until a hidden number is enfountered
+
 
 int main(){
     active = mainMenu();
-    if(active.pCount.totalwon+active.pCount.lostOrAbandoned!=active.pCount.totalPlayed){ // corrects suprise quit
-        active.pCount.lostOrAbandoned+=active.pCount.totalPlayed-(active.pCount.totalwon+active.pCount.lostOrAbandoned);
-        inputFile();
-    }
-    printf("\nlogged in with\nUser:%s\n\n",active.name);
-
-    char g='\0'; 
-    int Time;
-
-    do{
-        do{
-            printf("Difficulty: e=easy m=medium h=hard\nType [<difficulty>] to start a game.\n[d] for account details\n");
-            scanf(" %c",&g);
-        }while( (g!='e')&&(g!='m')&&(g!='h')&&(g!='d'));
-        if(g=='d'){
-            t scoreTime;
-            printf("\nPlayername: %s\nPlayer Scores: ",active.name);
-            seeTime(&scoreTime, active.pScore.eTime);
-            printf("e: %d:%d:%d\t",scoreTime.hh,scoreTime.mm,scoreTime.ss);
-            seeTime(&scoreTime, active.pScore.mTime);
-            printf("m: %d:%d:%d\t",scoreTime.hh,scoreTime.mm,scoreTime.ss);
-            seeTime(&scoreTime, active.pScore.hTime);
-            printf("h: %d:%d:%d\n",scoreTime.hh,scoreTime.mm,scoreTime.ss);
-            printf("Total played: %d\nTotal win: %d\nTotal left of lost: %d\n\n",active.pCount.totalPlayed,active.pCount.totalwon,active.pCount.lostOrAbandoned);
-        }
-    }while(g=='d');
-    minesweeper(g);
-    	Time=difftime(end,start);
-    	switch(g){
-        	case 'e':
-            	if(Time<active.pScore.eTime){
-                	active.pScore.eTime=Time;
-            	}
-            	break;
-        	case 'm':
-            	if(Time<active.pScore.mTime){
-                	active.pScore.mTime=Time;
-            	}
-            	break;
-        	case 'h':
-            	if(Time<active.pScore.hTime){
-                	active.pScore.hTime=Time;
-            	}
-            	break;
-	        default:
-            		printf("Error in moddifying high score");
-	        break;
-	}
-	active.pCount.totalwon+=1;
-   inputFile();
-
+    rectifyFile();
+    char gamemode=menueOption();
+    minesweeper(gamemode);
     return 0;
 }
 
@@ -183,6 +136,7 @@ playerInfo mainMenu(){
             exit(0);
             break;
     }
+    printf("\nlogged in with\nUser:%s\n\n",active.name);
 }
 
 
@@ -276,30 +230,30 @@ void seeTime(t *a, int info) {
 
 
 
-int minesweeper(char c){
-    int bombAmt;
-    input in;
+int minesweeper(char gameHardness){
+    input inputValue;
     rstMatrix();
     display();
     red();
     printf("\nYou can only dig in first move\n");
     rst();
     do{
-        userInput(&in);
-    }while(in.f!='D');
-    active.pCount.totalPlayed+=1;
+        userInput(&inputValue);
+    }while(inputValue.f!='D');
+    active.pCount.totalPlayed+=1; // Only counts as a play if you have digged
     inputFile();
     srand(time(NULL));
-    insertBombNumber(&in,c);
-    spreadOut(in.x,in.y);
+    insertBombNumber(&inputValue,gameHardness);
+    spreadOut(inputValue.x,inputValue.y);
     time(&start);
     do{
         display();
-        userInput(&in);
-        cheakInput(&in);
+        userInput(&inputValue);
+        cheakInput(&inputValue);
     }while(gameover());
     display();
     printf("\n\nCongratulations! you have won the game!\n\n\n");
+    updateIfHighscore(gameHardness);
     return 1;
 }
 void rstMatrix(){
@@ -310,24 +264,29 @@ void rstMatrix(){
     }
 }
 
-void userInput(input *in){
+void userInput(input *inputValue){
+    int inputAgain=1;
+    while(inputAgain){
         do{
-            inputAgain:
-            printf("\n[Q 0,0] to quit anywhere in during game\n[D <row>,<colunm> to dig]\n[F <row>,<colunm> to flag]\n[R <row>,<colunm>] to remove from number\n[r <row>,<colunm] to remove flag\ne.g. D 0,0 to dig the top left thing\n\n");
-            scanf(" %c %d,%d",&in->f,&in->x,&in->y);
-            // in->x-=1; // corrects the user input from display by subtracting 1 to cordinate value being saved
-            // in->y-=1;
+            printf("\n[Q 0,0] to quit anywhere in during game\n[D <row>,<colunm> to dig]\n[F <row>,<colunm> to flag]\n[R <row>,<colunm>] to remove from number\n[r <row>,<colunm] to remove flag\ne.g. [D 0,0] to dig the top left thing\n\n");
+            scanf(" %c %d,%d",&inputValue->f,&inputValue->x,&inputValue->y);
+            inputValue->x-=1; // corrects the user input from display by subtracting 1 to cordinate value being saved
+            inputValue->y-=1;
         }while(
-            (in->f!='Q')&&
-            (in->f!='D')&&
-            (in->f!='F')&&
-            (in->f!='r')&&
-            (in->f!='R')
+            (inputValue->f!='Q')&&
+            (inputValue->f!='D')&&
+            (inputValue->f!='F')&&
+            (inputValue->f!='r')&&
+            (inputValue->f!='R')
         );
-        if (!(in->x >= 0 && in->x < R && in->y >= 0 && in->y < C)){
+
+        inputAgain=0;
+
+        if (!(inputValue->x >= 0 && inputValue->x < R && inputValue->y >= 0 && inputValue->y < C)){
             printf("\nMake sure your co-ordinates are within the matrix\n");
-            goto inputAgain;
+            inputAgain=1;
         }
+    }
 }
 
 void surrounding(int r, int c){
@@ -401,22 +360,22 @@ void surrounding(int r, int c){
 
 }
 
-void cheakInput(input *in){
-        switch(in->f){
+void cheakInput(input *inputValue){
+        switch(inputValue->f){
             case 'D':
-            dig(in->x,in->y);
+            dig(inputValue->x,inputValue->y);
             break;
-            case 'F':
-            flag(in);
+            case 'F': 
+            flag(inputValue);
             break;
             case 'R':
-            rNum(in->x,in->y);
+            rNum(inputValue->x,inputValue->y);
             break;
             case 'r':
-            rFlag(in);
+            rFlag(inputValue);
             break;
             case 'Q':
-            quit(in);
+            quit(inputValue);
             break;
             default:
             break;
@@ -442,40 +401,40 @@ void dig(int a, int b){
         return;
     }
 }
-void flag(input *in){
-    if(game[in->x][in->y]>=('N')&&game[in->x][in->y]<=('U')){ // if hidden numers are flagged, lowercase them
-        game[in->x][in->y]=tolower(game[in->x][in->y]);
+void flag(input *inputValue){
+    if(game[inputValue->x][inputValue->y]>=('N')&&game[inputValue->x][inputValue->y]<=('U')){ // if hidden numers are flagged, lowercase them
+        game[inputValue->x][inputValue->y]=tolower(game[inputValue->x][inputValue->y]);
         return;
     }
-    if(game[in->x][in->y]==('B')){ // if hidden bombs are flagged, lowercase bomb
-        game[in->x][in->y]=tolower(game[in->x][in->y]);
+    if(game[inputValue->x][inputValue->y]==('B')){ // if hidden bombs are flagged, lowercase bomb
+        game[inputValue->x][inputValue->y]=tolower(game[inputValue->x][inputValue->y]);
         return;
     }
-    if(game[in->x][in->y]=='G'){
-        game[in->x][in->y]=tolower(game[in->x][in->y]);
+    if(game[inputValue->x][inputValue->y]=='G'){
+        game[inputValue->x][inputValue->y]=tolower(game[inputValue->x][inputValue->y]);
         return; 
     }
-    if((game[in->x][in->y]>=('n')&&game[in->x][in->y]<=('u'))||game[in->x][in->y]=='b'||game[in->x][in->y]=='g'){
+    if((game[inputValue->x][inputValue->y]>=('n')&&game[inputValue->x][inputValue->y]<=('u'))||game[inputValue->x][inputValue->y]=='b'||game[inputValue->x][inputValue->y]=='g'){
         printf("\n\nYou cannot flag, Flagged Items\n\n");
         return;
     }
 }
-void rFlag(input *in){
-    if(game[in->x][in->y]>=('n')&&game[in->x][in->y]<=('u')){ // if hidden numers are unflagged flagged, uppercase them
-        game[in->x][in->y]=toupper(game[in->x][in->y]);
+void rFlag(input *inputValue){
+    if(game[inputValue->x][inputValue->y]>=('n')&&game[inputValue->x][inputValue->y]<=('u')){ // if hidden numers are unflagged flagged, uppercase them
+        game[inputValue->x][inputValue->y]=toupper(game[inputValue->x][inputValue->y]);
         return;
     }
-    if(game[in->x][in->y]==('b')){ // if hidden bombs are flagged, uppercase them
-        game[in->x][in->y]=toupper(game[in->x][in->y]);
+    if(game[inputValue->x][inputValue->y]==('b')){ // if hidden bombs are flagged, uppercase them
+        game[inputValue->x][inputValue->y]=toupper(game[inputValue->x][inputValue->y]);
         return;
     }
-    if(game[in->x][in->y]=='g'){
-        game[in->x][in->y]=toupper(game[in->x][in->y]);
+    if(game[inputValue->x][inputValue->y]=='g'){
+        game[inputValue->x][inputValue->y]=toupper(game[inputValue->x][inputValue->y]);
         return;
     }
 }
-void quit(input *in){
-    if(in->x==0&&in->y==0){
+void quit(input *inputValue){
+    if(inputValue->x==0&&inputValue->y==0){
         printf("\n\nYou exited the game\n\n");
 	    active.pCount.lostOrAbandoned++;
     	inputFile();
@@ -547,9 +506,6 @@ void spreadOut(int x, int y) {
         return;
     }
 
-    if(game[x][y]>='0'&&game[x][y]<='9'){
-        return;
-    }
     // Mark the current tile as revealed (whitespace or revealed grass)
     game[x][y]='W';
 
@@ -564,7 +520,7 @@ int gameover(){
     int i,j,numGF=0;
     for(i=0;i<R;i++){
         for(j=0;j<C;j++){
-            if(game[i][j]=='G'||game[i][j]=='g'||(game[i][j]>='N'&&game[i][j]<='U')){
+            if(game[i][j]=='G'||game[i][j]=='g'||(game[i][j]>='N'&&game[i][j]<='U')||(game[i][j]>='n'&&game[i][j]<='u')){
                 numGF+=1;
             }
         }
@@ -583,10 +539,10 @@ void display(){
     int i,j;
     for(i=-1;i<R;i++){
         white();
-        (i==-1)?(printf(" ")):(printf("%d",i));
+        (i==-1)?(printf(" ")):(printf("%d",i+1));
         for(j=0;j<C;j++){
             if(i==-1){
-                printf("\t%d",j);
+                printf("\t%d",j+1);
                 if(j==C-1){
                     printf("\n");
                 }
@@ -597,7 +553,7 @@ void display(){
                     printf("\tG");
                     continue;
                 }
-                if(game[i][j]>=('n')&&game[i][j]<=('u')||game[i][j]=='b'){ // flagged numbers
+                if(game[i][j]>=('n')&&game[i][j]<=('u')||game[i][j]=='b'||game[i][j]=='g'){ // flagged numbers
                     purple();
                     printf("\tF");
                     continue;
@@ -616,18 +572,6 @@ void display(){
                         white();
                         printf("\tW");
                         break;
-                    case 'b': //bomb 
-                        cyan();
-                        printf("\tF");
-                        break;
-                    case 'w':
-                        cyan();
-                        printf("\tF");
-                        break;
-                    case 'F': // flag
-                        cyan();
-                        printf("\tF");
-                        break;
                     case 'B': // they don't need to know that there is a bomb there
                         green();
                         printf("\tG");
@@ -642,7 +586,7 @@ void display(){
     rst();
 }
 
-void insertBombNumber(input *in, char level){
+void insertBombNumber(input *inputValue, char level){
     int nBombs,tempC,tempR, i,j,k,l,count=0;
     //bomb
     if(level=='e'){
@@ -658,8 +602,8 @@ void insertBombNumber(input *in, char level){
     do{
         tempC=rand()%C;
         tempR=rand()%R;
-        if((in->x!=tempR&&in->y!=tempC)){ // not bomb in first press
-            if(game[tempR][tempC]!='B'){ // if the value is already B there
+        if((inputValue->x!=tempR&&inputValue->y!=tempC)){ // not bomb in first press
+            if(game[tempR][tempC]=='G'){ // if the value is already B there
                 game[tempR][tempC]='B';
                 --nBombs;
             }
@@ -685,10 +629,62 @@ void insertBombNumber(input *in, char level){
             }
         }
     }
+}
 
+void rectifyFile(){
+    if(active.pCount.totalwon+active.pCount.lostOrAbandoned!=active.pCount.totalPlayed){ 
+        active.pCount.lostOrAbandoned+=active.pCount.totalPlayed-(active.pCount.totalwon+active.pCount.lostOrAbandoned);
+        inputFile();
+    }
+}
 
+char menueOption(){
+    char menueOption='\0';
+    do{
+        do{
+            printf("Difficulty: e=easy m=medium h=hard\nType [<difficulty>] to start a game.\n[d] for account details\n");
+            scanf(" %c",&menueOption);
+        }while( (menueOption!='e')&&(menueOption!='m')&&(menueOption!='h')&&(menueOption!='d'));
+        if(menueOption=='d'){
+            t scoreTime;
+            printf("\nPlayername: %s\nPlayer Scores: ",active.name);
+            seeTime(&scoreTime, active.pScore.eTime);
+            printf("e: %d:%d:%d\t",scoreTime.hh,scoreTime.mm,scoreTime.ss);
+            seeTime(&scoreTime, active.pScore.mTime);
+            printf("m: %d:%d:%d\t",scoreTime.hh,scoreTime.mm,scoreTime.ss);
+            seeTime(&scoreTime, active.pScore.hTime);
+            printf("h: %d:%d:%d\n",scoreTime.hh,scoreTime.mm,scoreTime.ss);
+            printf("Total played: %d\nTotal win: %d\nTotal left of lost: %d\n\n",active.pCount.totalPlayed,active.pCount.totalwon,active.pCount.lostOrAbandoned);
+        }
+    }while(menueOption=='d');
+    return menueOption;
+}
 
-
+void updateIfHighscore(char gamemode){
+    int timeScore;
+    timeScore=difftime(end,start);
+    switch(gamemode){
+       	case 'e':
+           	if(timeScore<active.pScore.eTime){
+               	active.pScore.eTime=timeScore;
+           	}
+           	break;
+        case 'm':
+           	if(timeScore<active.pScore.mTime){
+               	active.pScore.mTime=timeScore;
+           	}
+           	break;
+        case 'h':
+           	if(timeScore<active.pScore.hTime){
+               	active.pScore.hTime=timeScore;
+           	}
+           	break;
+	       default:
+           		printf("Error in moddifying high score");
+	       break;
+	}
+	active.pCount.totalwon+=1;
+   inputFile();
 }
 
 void rst(){
@@ -699,16 +695,8 @@ void green(){
     printf("\033[0;32m");
 }
 
-void black(){
-    printf("\033[0;30m");
-}
-
 void red(){
     printf("\033[0;31m");
-}
-
-void yellow(){
-    printf("\033[0;33m");
 }
 
 void white(){
@@ -721,9 +709,7 @@ void purple(){
 void blue(){
     printf("\033[0;34m");
 }
-void redBold(){
-    printf("\033[1;31m");
-}
+
 void cyan(){
     printf("\033[0;36m");
 }
