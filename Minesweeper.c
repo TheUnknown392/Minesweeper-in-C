@@ -3,6 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/stat.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#include "Resources/resources.h"
+#else
+#inlude <unistd.h>
+#endif
 
 // sets row and colunm of matrix
 #define R 15
@@ -13,6 +21,9 @@
 #define HARD 45
 // the extention of file
 #define fileExten "MINESWEEPERPLAYER.txt"
+#define FolderLocation "./Player Folder/"
+// time to wait before exit in miliseconds
+#define SleepTime 5000
 
 typedef struct input{// game input
     char f;
@@ -58,8 +69,9 @@ void cyan();
 playerInfo login(); // log in
 playerInfo mainMenu(); // menue to create, log in your minsweeper account and returns value of active player
 int signup(); // sign up
-int minesweeper(char gameHardness); // actual process of minsweeper game is in here
+void minesweeper(char gameHardness); // actual process of minsweeper game is in here
 char menueOption(); // to choose between menu
+void cheakFolder();
 void inputFile();// inputs current active player information to file
 void rectifyFile();// corrects suprise quits
 void seeTime(t *a,int info); // turns seconds into hh:mm:ss
@@ -80,20 +92,34 @@ void rFlag(input *inputValue); // removes flags
 void quit(input *inputValue); // quit
 void spreadOut(int x, int y); // when digged, spreads out until a hidden number is enfountered
 
+void waitExit();
+
 
 int main(){
+#ifdef _WIN32
+    HANDLE forEscapeSequence=GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD dwMode=0;
+    GetConsoleMode(forEscapeSequence, &dwMode);
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(forEscapeSequence, dwMode);
+#endif
+
+    cheakFolder();
     active = mainMenu();
     rectifyFile();
     char gamemode=menueOption();
     minesweeper(gamemode);
+    
+    waitExit(0);
     return 0;
 }
 
-void inputFile(){ 
-    char temp[100];
-    strcpy(temp,active.name);
-    strcat(temp,fileExten);
-    FILE*fp=fopen(temp,"w");
+void inputFile(){
+    char filePath[150];  
+    strcpy(filePath,FolderLocation);
+    strcat(filePath,active.name);
+    strcat(filePath,fileExten);
+    FILE*fp=fopen(filePath,"w");
     if(fp==NULL){
         printf("\n\nNo file found\n\n");
     }
@@ -142,18 +168,19 @@ playerInfo mainMenu(){
 
 int signup(){
     playerInfo newSignin;    
+    char filePath[150];  
 
     printf("Input your name (no numbers): ");
     scanf("%s", newSignin.name);  
 
     printf("Input your New password (no numbers): ");
-    scanf("%s", newSignin.password);  
+    scanf("%s", newSignin.password);
 
-    char temp[100];  
-    strcpy(temp, newSignin.name);
-    strcat(temp, fileExten);
+    strcpy(filePath,FolderLocation);//inserts current path ./
+    strcat(filePath,newSignin.name);// inserts name
+    strcat(filePath, fileExten);// inserts file extention MINESWEEpErPLAYER.txt
     FILE *fp;
-    fp = fopen(temp, "w");
+    fp = fopen(filePath, "w");
     if(fp == NULL){
         printf("Error opening file for user\n");
         return 0;
@@ -186,15 +213,16 @@ playerInfo login(){
     scanf("%s",&userName);
     printf("Input your password: ");
     scanf("%s",&password);
-        playerInfo search;
-    char temp[100];
-    strcpy(temp, userName);
-    strcat(temp, fileExten);
+    playerInfo search;
+    char filePath[150]; 
+    strcpy(filePath,FolderLocation);
+    strcat(filePath, userName);
+    strcat(filePath, fileExten);
 
-    FILE *fp = fopen(temp, "r");
+    FILE *fp = fopen(filePath, "r");
     if(fp == NULL){
         printf("Error opening file for user\n");
-        exit(0);
+        waitExit(1);
     }
 
     fscanf(
@@ -215,7 +243,7 @@ playerInfo login(){
         return search;
     } else {
         printf("\nIncorrect password or username\n");
-        exit(0);
+        waitExit(1);
     }
 }
 
@@ -230,7 +258,7 @@ void seeTime(t *a, int info) {
 
 
 
-int minesweeper(char gameHardness){
+void minesweeper(char gameHardness){
     input inputValue;
     rstMatrix();
     display();
@@ -254,7 +282,6 @@ int minesweeper(char gameHardness){
     display();
     printf("\n\nCongratulations! you have won the game!\n\n\n");
     updateIfHighscore(gameHardness);
-    return 1;
 }
 void rstMatrix(){
     for(int i=0;i<R;i++){
@@ -268,7 +295,7 @@ void userInput(input *inputValue){
     int inputAgain=1;
     while(inputAgain){
         do{
-            printf("\n[Q 0,0] to quit anywhere in during game\n[D <row>,<colunm> to dig]\n[F <row>,<colunm> to flag]\n[R <row>,<colunm>] to remove from number\n[r <row>,<colunm] to remove flag\ne.g. [D 0,0] to dig the top left thing\n\n");
+            printf("\n[Q 1,1] to quit anywhere in during game\n[D <row>,<colunm> to dig]\n[F <row>,<colunm> to flag]\n[R <row>,<colunm>] to remove from number\n[r <row>,<colunm] to remove flag\ne.g. [D 1,1] to dig the top left thing\n\n");
             scanf(" %c %d,%d",&inputValue->f,&inputValue->x,&inputValue->y);
             inputValue->x-=1; // corrects the user input from display by subtracting 1 to cordinate value being saved
             inputValue->y-=1;
@@ -386,7 +413,7 @@ void dig(int a, int b){
         printf("\n\nGameOver\n\n");
 	    active.pCount.lostOrAbandoned+=1;
 	    inputFile();
-        exit(0);
+        waitExit(0);
     }
     if(game[a][b]=='F'||(game[a][b]>=('n')&&game[a][b]<=('u'))||game[a][b]=='b'){ // tries to dig a flag
         printf("\n\nFlaggs skipped\n\n");
@@ -438,7 +465,6 @@ void quit(input *inputValue){
         printf("\n\nYou exited the game\n\n");
 	    active.pCount.lostOrAbandoned++;
     	inputFile();
-        exit(0);
     }
 }
 
@@ -597,7 +623,7 @@ void insertBombNumber(input *inputValue, char level){
         nBombs=HARD;
     }else{
         printf("Error creating bomb");
-        exit(0);
+        waitExit(0);
     }
     do{
         tempC=rand()%C;
@@ -685,6 +711,34 @@ void updateIfHighscore(char gamemode){
 	}
 	active.pCount.totalwon+=1;
    inputFile();
+}
+
+void cheakFolder(){
+    struct stat Directory; 
+    int stats=stat(FolderLocation,&Directory);// returns 0 when sucess otherwise -1
+
+    if(stats==-1){
+#ifdef _WIN32
+        stats=mkdir(FolderLocation);// returns 0 when sucess otherwise -1
+#else
+        stats=_mkdir(FolderLocation,S_IRUSR|S_IROTH);
+#endif
+        if(stats){
+            perror("Error");
+            waitExit(1);
+        }
+
+    }
+}
+
+void waitExit(int i){
+    printf("\nExiting in ~%d seconds",SleepTime/1000);
+#ifdef _WIN32
+    Sleep(SleepTime);
+#else
+    _sleep(SleepTime/1000);
+#endif
+    exit(1);
 }
 
 void rst(){

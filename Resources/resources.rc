@@ -1,0 +1,2 @@
+#include "resources.h"
+MY_ICONN ICON "bitmap.ico"
