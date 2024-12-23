@@ -4,13 +4,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/stat.h>
-
-#ifdef _WIN32
 #include <windows.h>
 #include "Resources/resources.h"
-#else
-#inlude <unistd.h>
-#endif
 
 // sets row and colunm of matrix
 #define R 15
@@ -21,7 +16,7 @@
 #define HARD 45
 // the extention of file
 #define fileExten "MINESWEEPERPLAYER.txt"
-#define FolderLocation "./Player Folder/"
+#define FolderLocation "./CLI Minesweeper Players/"
 // time to wait before exit in miliseconds
 #define SleepTime 5000
 
@@ -57,6 +52,8 @@ time_t start,end; // store start and end time
 char game[R][C]; // store the detail of game board
 char ch[3][3]; // to store temporary data of surrounding relative to some cordinate
 
+HANDLE forEscapeSequence;
+
 //colors
 void rst();
 void green();
@@ -65,6 +62,7 @@ void white();
 void purple();
 void blue();
 void cyan();
+void yellow();
 
 playerInfo login(); // log in
 playerInfo mainMenu(); // menue to create, log in your minsweeper account and returns value of active player
@@ -78,7 +76,6 @@ void seeTime(t *a,int info); // turns seconds into hh:mm:ss
 void updateIfHighscore(char gamemode);//updates the player's score if there is high score
 
 int gameover();
-int rNum(int a, int b); // remove from number
 int charNumber(char c); // changes unflagged hidden numbers into int
 void rstMatrix(); // puts 'G' value in mineweeper matrix (game)
 void insertBombNumber(input *inputValue, char level); // insert bomb and number in matrix
@@ -87,30 +84,28 @@ void userInput(input *inputValue); // takes user input
 void display(); // displays matrix board
 void cheakInput(input *inputValue); // cheaks given input
 void dig(int a,int b); // digs
+int chord(int a, int b); // remove from number
 void flag(input *inputValue); // flags
 void rFlag(input *inputValue); // removes flags
 void quit(input *inputValue); // quit
 void spreadOut(int x, int y); // when digged, spreads out until a hidden number is enfountered
 
-void waitExit();
-
-
+void waitExit(int i); // waits 5 seconds before exiting return code given
+void textColor(char *character,void (*entryColor)(void),void (*exitColor)(void),...); // prints the text in some color depending on the function input and exits in different color
 int main(){
-#ifdef _WIN32
-    HANDLE forEscapeSequence=GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD dwMode=0;
-    GetConsoleMode(forEscapeSequence, &dwMode);
-    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    SetConsoleMode(forEscapeSequence, dwMode);
-#endif
+    forEscapeSequence=GetStdHandle(STD_OUTPUT_HANDLE); //gets handle for standard input output
+    DWORD dwMode=0; // to store state of window settings, I think
+    GetConsoleMode(forEscapeSequence, &dwMode); // getting the settings of stdio
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING; // enabling the asci escape code
+    SetConsoleMode(forEscapeSequence, dwMode); // implementing the new setting to stdio
 
     cheakFolder();
     active = mainMenu();
     rectifyFile();
-    char gamemode=menueOption();
-    minesweeper(gamemode);
-    
+    minesweeper(menueOption());/*returns gamemode*/
+
     waitExit(0);
+    
     return 0;
 }
 
@@ -121,7 +116,8 @@ void inputFile(){
     strcat(filePath,fileExten);
     FILE*fp=fopen(filePath,"w");
     if(fp==NULL){
-        printf("\n\nNo file found\n\n");
+        textColor("\n\nNo file found\n\n",red,rst);
+        waitExit(1);
     }
     fprintf(
         fp, 
@@ -170,10 +166,10 @@ int signup(){
     playerInfo newSignin;    
     char filePath[150];  
 
-    printf("Input your name (no numbers): ");
+    printf("Input your name (no space): ");
     scanf("%s", newSignin.name);  
 
-    printf("Input your New password (no numbers): ");
+    printf("Input your New password (no space): ");
     scanf("%s", newSignin.password);
 
     strcpy(filePath,FolderLocation);//inserts current path ./
@@ -182,7 +178,8 @@ int signup(){
     FILE *fp;
     fp = fopen(filePath, "w");
     if(fp == NULL){
-        printf("Error opening file for user\n");
+        textColor("Error opening file for user\n",red,rst);
+        waitExit(1);
         return 0;
     }
 
@@ -201,11 +198,9 @@ int signup(){
 
     fclose(fp);
 
-    printf("\nYou have created your account.\nPlease remember your Username.\n");
+    textColor("\nYou have created your account.\nPlease remember your Username.\n",yellow,rst);
     return 1;
 }
-
-
 
 playerInfo login(){
     char password[50],userName[50];
@@ -221,8 +216,8 @@ playerInfo login(){
 
     FILE *fp = fopen(filePath, "r");
     if(fp == NULL){
-        printf("Error opening file for user\n");
-        waitExit(1);
+        textColor("File not found. Error opening file for user\n",red,rst);
+        waitExit(0);
     }
 
     fscanf(
@@ -242,11 +237,10 @@ playerInfo login(){
     if(strcmp(password, search.password) == 0){
         return search;
     } else {
-        printf("\nIncorrect password or username\n");
-        waitExit(1);
+        textColor("\nIncorrect password or username\n",red,rst);
+        waitExit(0);
     }
 }
-
 
 void seeTime(t *a, int info) {
     a->hh = info / 3600;         
@@ -255,16 +249,11 @@ void seeTime(t *a, int info) {
     a->ss = info % 60;          
 }
 
-
-
-
 void minesweeper(char gameHardness){
     input inputValue;
     rstMatrix();
     display();
-    red();
-    printf("\nYou can only dig in first move\n");
-    rst();
+    textColor("\nYou can only dig in first move\n",red,rst);
     do{
         userInput(&inputValue);
     }while(inputValue.f!='D');
@@ -280,9 +269,10 @@ void minesweeper(char gameHardness){
         cheakInput(&inputValue);
     }while(gameover());
     display();
-    printf("\n\nCongratulations! you have won the game!\n\n\n");
+    textColor("\n\nCongratulations! you have won the game!\n\n\n",cyan,rst);
     updateIfHighscore(gameHardness);
 }
+
 void rstMatrix(){
     for(int i=0;i<R;i++){
         for(int j=0;j<C;j++){
@@ -310,7 +300,7 @@ void userInput(input *inputValue){
         inputAgain=0;
 
         if (!(inputValue->x >= 0 && inputValue->x < R && inputValue->y >= 0 && inputValue->y < C)){
-            printf("\nMake sure your co-ordinates are within the matrix\n");
+            textColor("\nMake sure your co-ordinates are within the matrix\n",red,rst);
             inputAgain=1;
         }
     }
@@ -327,7 +317,6 @@ void surrounding(int r, int c){
     //0,0  0,1  0,2     mr,mc   mr,c    mr pc
     //1,0  1,1  1,2     r,mc    r,c     r,pc
     //2,0  2,1  2,2     pr,mc   pr,c    pr,pc
-
 
     // cheak top boundary
     if(mr < 0){
@@ -388,26 +377,30 @@ void surrounding(int r, int c){
 }
 
 void cheakInput(input *inputValue){
-        switch(inputValue->f){
-            case 'D':
-            dig(inputValue->x,inputValue->y);
-            break;
-            case 'F': 
-            flag(inputValue);
-            break;
-            case 'R':
-            rNum(inputValue->x,inputValue->y);
-            break;
-            case 'r':
-            rFlag(inputValue);
-            break;
-            case 'Q':
-            quit(inputValue);
-            break;
-            default:
-            break;
-        }
+    switch(inputValue->f){
+        case 'D':
+        dig(inputValue->x,inputValue->y);
+        break;
+        case 'F': 
+        flag(inputValue);
+        break;
+        case 'R':
+        chord(inputValue->x,inputValue->y);
+        break;
+        case 'r':
+        rFlag(inputValue);
+        break;
+        case 'Q':
+        quit(inputValue);
+        break;
+        default:
+        break;
+    }
+
+    inputValue->x=0;
+    inputValue->y=0;
 }
+
 void dig(int a, int b){
     if(game[a][b]=='B'){ // digs a bomb
         printf("\n\nGameOver\n\n");
@@ -416,7 +409,7 @@ void dig(int a, int b){
         waitExit(0);
     }
     if(game[a][b]=='F'||(game[a][b]>=('n')&&game[a][b]<=('u'))||game[a][b]=='b'){ // tries to dig a flag
-        printf("\n\nFlaggs skipped\n\n");
+        textColor("\n\nFlaggs Skipped\n\n",yellow,rst);
         return;
     }
     if(game[a][b]>=('N')&&game[a][b]<=('U')){ // tries to dig a number
@@ -428,6 +421,7 @@ void dig(int a, int b){
         return;
     }
 }
+
 void flag(input *inputValue){
     if(game[inputValue->x][inputValue->y]>=('N')&&game[inputValue->x][inputValue->y]<=('U')){ // if hidden numers are flagged, lowercase them
         game[inputValue->x][inputValue->y]=tolower(game[inputValue->x][inputValue->y]);
@@ -442,10 +436,11 @@ void flag(input *inputValue){
         return; 
     }
     if((game[inputValue->x][inputValue->y]>=('n')&&game[inputValue->x][inputValue->y]<=('u'))||game[inputValue->x][inputValue->y]=='b'||game[inputValue->x][inputValue->y]=='g'){
-        printf("\n\nYou cannot flag, Flagged Items\n\n");
+        textColor("\nYou cannot flag a flagged item\n",red,rst);
         return;
     }
 }
+
 void rFlag(input *inputValue){
     if(game[inputValue->x][inputValue->y]>=('n')&&game[inputValue->x][inputValue->y]<=('u')){ // if hidden numers are unflagged flagged, uppercase them
         game[inputValue->x][inputValue->y]=toupper(game[inputValue->x][inputValue->y]);
@@ -460,15 +455,17 @@ void rFlag(input *inputValue){
         return;
     }
 }
+
 void quit(input *inputValue){
     if(inputValue->x==0&&inputValue->y==0){
-        printf("\n\nYou exited the game\n\n");
+        textColor("\n\nYou exited the game\n\n",blue,rst);
 	    active.pCount.lostOrAbandoned++;
     	inputFile();
+        waitExit(0);
     }
 }
 
-int rNum(int a, int b){
+int chord(int a, int b){
     if(game[a][b]>='1'&&game[a][b]<='9'){
         int countFlag=0;
         surrounding(a,b);
@@ -494,11 +491,11 @@ int rNum(int a, int b){
             dig(a+1, b+1);  // Bottom-right
 	        return 1;
         }else{
-            printf("\nYou can only remove from numbers if you have proper flag\n");
+            textColor("\nYou can only remove from numbers if you have proper flag\n",red,rst);
             return 0;
         }
 	}else{
-    	printf("\nYou can only remove from numbers\n");
+    	textColor("\nYou can only remove from numbers\n",red,rst);
 	    return 2;
     }
 }
@@ -560,52 +557,47 @@ int gameover(){
 
 }
 
-
 void display(){
     int i,j;
     for(i=-1;i<R;i++){
         white();
-        (i==-1)?(printf(" ")):(printf("%d",i+1));
+        (i==-1)?(printf(" ")):(printf("%d",i+1)); // displays row number
         for(j=0;j<C;j++){
-            if(i==-1){
+
+            if(i==-1){ // Displays Colunm Numbers
                 printf("\t%d",j+1);
                 if(j==C-1){
                     printf("\n");
                 }
             }
-            if(i>=0){
-                if(game[i][j]>='N'&&game[i][j]<='U'){ // hidden number
+
+            if(i>=0){ //Displays board
+                if(game[i][j]>='N'&&game[i][j]<='U'||game[i][j]=='B'){ // hidden elements
                     green();
                     printf("\tG");
                     continue;
-                }
-                if(game[i][j]>=('n')&&game[i][j]<=('u')||game[i][j]=='b'||game[i][j]=='g'){ // flagged numbers
+                }else if(game[i][j]>=('n')&&game[i][j]<=('u')||game[i][j]=='b'||game[i][j]=='g'||game[i][j]=='w'){ // flagged elements
                     purple();
                     printf("\tF");
                     continue;
-                }
-                if(game[i][j]>='1'&&game[i][j]<='9'){ // shown number
+                }else if(game[i][j]>='1'&&game[i][j]<='9'){ // shown number
                     blue();
                     printf("\t%c",game[i][j]);
                     continue;
-                }
-                switch(game[i][j]){
-                    case 'G': // grass
-                        green();
-                        printf("\tG");
-                        break;
-                    case 'W':
-                        white();
-                        printf("\tW");
-                        break;
-                    case 'B': // they don't need to know that there is a bomb there
-                        green();
-                        printf("\tG");
-                        break;
-                    default:
-                    break;
+                }else if(game[i][j]=='G'){ // Grass
+                    green();
+                    printf("\tG");
+                    continue;
+                }else if(game[i][j]=='W'){ // white space
+                    white();
+                    printf("\tW");
+                    continue;
+                }else{
+                    printf("Error displaying");
+                    waitExit(1);
                 }
             }
+
         }
         printf("\n");
     }
@@ -622,8 +614,8 @@ void insertBombNumber(input *inputValue, char level){
     }else if(level=='h'){
         nBombs=HARD;
     }else{
-        printf("Error creating bomb");
-        waitExit(0);
+        textColor("\nError creating bomb\n",red,rst);
+        waitExit(1);
     }
     do{
         tempC=rand()%C;
@@ -680,7 +672,7 @@ char menueOption(){
             printf("m: %d:%d:%d\t",scoreTime.hh,scoreTime.mm,scoreTime.ss);
             seeTime(&scoreTime, active.pScore.hTime);
             printf("h: %d:%d:%d\n",scoreTime.hh,scoreTime.mm,scoreTime.ss);
-            printf("Total played: %d\nTotal win: %d\nTotal left of lost: %d\n\n",active.pCount.totalPlayed,active.pCount.totalwon,active.pCount.lostOrAbandoned);
+            printf("Total played: %d\nTotal win: %d\nTotal left or lost: %d\n\n",active.pCount.totalPlayed,active.pCount.totalwon,active.pCount.lostOrAbandoned);
         }
     }while(menueOption=='d');
     return menueOption;
@@ -706,7 +698,7 @@ void updateIfHighscore(char gamemode){
            	}
            	break;
 	       default:
-           		printf("Error in moddifying high score");
+           		textColor("Error in moddifying high score",red,rst);
 	       break;
 	}
 	active.pCount.totalwon+=1;
@@ -716,29 +708,38 @@ void updateIfHighscore(char gamemode){
 void cheakFolder(){
     struct stat Directory; 
     int stats=stat(FolderLocation,&Directory);// returns 0 when sucess otherwise -1
-
     if(stats==-1){
-#ifdef _WIN32
         stats=mkdir(FolderLocation);// returns 0 when sucess otherwise -1
-#else
-        stats=_mkdir(FolderLocation,S_IRUSR|S_IROTH);
-#endif
+
         if(stats){
             perror("Error");
             waitExit(1);
         }
-
     }
 }
 
 void waitExit(int i){
-    printf("\nExiting in ~%d seconds",SleepTime/1000);
-#ifdef _WIN32
+	char ask='\0';
+	while(ask!='y'&&ask!='Y'){
+		printf("exit[y]: ");
+		//while((ch=getchar())=='\n'&&ch!=EOF){}
+		scanf(" %c",&ask);
+	}
+    textColor("\nExiting in ~%d seconds",green,rst,SleepTime/1000);
+
+    CloseHandle(forEscapeSequence);
     Sleep(SleepTime);
-#else
-    _sleep(SleepTime/1000);
-#endif
-    exit(1);
+  
+    exit(i);
+}
+
+void textColor(char *character,void (*entryColor)(void),void (*exitColor)(void),...){
+    va_list variable;
+    va_start(variable,exitColor);
+    entryColor();
+    vprintf(character,variable);
+    exitColor();
+    va_end(variable);
 }
 
 void rst(){
@@ -760,10 +761,15 @@ void white(){
 void purple(){
     printf("\033[0;35m");
 }
+
 void blue(){
     printf("\033[0;34m");
 }
 
 void cyan(){
     printf("\033[0;36m");
+}
+
+void yellow(){
+    printf("\033[0;33m");
 }
